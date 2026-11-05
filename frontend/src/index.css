@@ -1,0 +1,286 @@
+:root {
+  --ink: #10282f;
+  --paper: #f5f8f7;
+  --card: #fff;
+  --line: #d5e0dd;
+  --accent: #1d6b5a;
+  --flag: #b86e00;
+  --muted: #5b6f6b;
+  --danger: #a3262b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.5 "Segoe UI", system-ui, sans-serif;
+}
+
+h1, h2, h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 .6rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--flag);
+  outline-offset: 2px;
+}
+
+/* Header and navigation */
+header.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--ink);
+  color: #fff;
+  padding: .7rem 1.2rem;
+}
+
+header.bar .brand {
+  font: 600 1.25rem Georgia, serif;
+}
+
+nav {
+  display: flex;
+  gap: .3rem;
+}
+
+nav button,
+.linkbtn {
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  padding: .4rem .8rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+nav button.on {
+  background: rgba(255, 255, 255, .16);
+}
+
+/* Main content */
+main {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1.4rem 1rem 3rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1rem;
+}
+
+/* Dashboard statistics */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: .8rem;
+  margin-bottom: 1rem;
+}
+
+.stat b {
+  display: block;
+  font: 600 1.9rem Georgia, serif;
+}
+
+.stat span {
+  color: var(--muted);
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: .55rem .4rem;
+  border-bottom: 1px solid var(--line);
+}
+
+td.row {
+  margin: 0;
+}
+
+/* Buttons */
+button.btn {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: .55rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.btn.alt {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+button.btn.bad {
+  background: var(--danger);
+}
+
+button.btn:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+/* Forms */
+input,
+textarea {
+  width: 100%;
+  font: inherit;
+  padding: .55rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: .25rem 0 .8rem;
+}
+
+textarea {
+  min-height: 200px;
+}
+
+select {
+  font: inherit;
+  padding: .5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin: .25rem 0 .8rem;
+  background: #fff;
+}
+
+/* Status indicators */
+.flag {
+  border-left: 4px solid var(--flag);
+  padding: .3rem .7rem;
+  margin: .4rem 0;
+  background: #fff7ea;
+}
+
+.badge {
+  display: inline-block;
+  padding: .05rem .5rem;
+  border-radius: 99px;
+  font-size: .85rem;
+  border: 1px solid var(--line);
+}
+
+.badge.warn {
+  background: #fff7ea;
+  border-color: var(--flag);
+  color: var(--flag);
+}
+
+.draftbanner {
+  background: #fff7ea;
+  border: 1px solid var(--flag);
+  padding: .4rem .7rem;
+  border-radius: 6px;
+  margin-bottom: .6rem;
+}
+
+.err {
+  color: var(--danger);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* Charts */
+.chart {
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: .4rem;
+}
+
+.legend i {
+  display: inline-block;
+  width: .8rem;
+  height: .8rem;
+  border-radius: 50%;
+  margin-right: .35rem;
+}
+
+/* Layout utilities */
+.row {
+  display: flex;
+  gap: .6rem;
+  flex-wrap: wrap;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-bottom: 1rem;
+}
+
+.tabs button {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: .45rem .9rem;
+  font: inherit;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.tabs button.on {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+details {
+  margin: .6rem 0;
+}
+
+pre {
+  white-space: pre-wrap;
+  font: inherit;
+  margin: 0;
+}
+
+/* Motion accessibility */
+@media (prefers-reduced-motion: no-preference) {
+  button.btn {
+    transition: filter .15s;
+  }
+
+  button.btn:hover {
+    filter: brightness(1.1);
+  }
+}
