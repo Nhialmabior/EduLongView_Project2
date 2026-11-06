@@ -1,15 +1,29 @@
+databases:
+  - name: edulongview-db
+    plan: free
+    databaseName: edulongview
+
 services:
   - type: web
     name: edulongview-api
     runtime: python
+    plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: ENV
+        value: production
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        sync: false   # paste your PostgreSQL connection string
+        fromDatabase:
+          name: edulongview-db
+          property: connectionString
       - key: CORS_ORIGINS
-        sync: false   # your frontend URL, e.g. https://your-site.netlify.app
+        value: https://nhialmabior.github.io
+      - key: FRONTEND_URL
+        value: https://nhialmabior.github.io/EduLongView_Project2
