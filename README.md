@@ -1,54 +1,73 @@
-# EduLongView v0.2
+# EduLongView
 
-A teacher-support platform that shows learner progress across terms and keeps teachers in control:
-AI only prepares **drafts**; nothing reaches the official profile until a teacher approves it.
-Synthetic data only.
+A teacher-support platform that shows how each learner develops across terms and years. Teachers stay in control: AI only prepares **drafts**, and nothing becomes an official record until an authorized person reviews and approves it.
 
-## What is built
-- **Access:** login, hashed passwords, JWT sessions, roles (school_admin, teacher, reviewer), school-level isolation,
-  teachers limited to their own classes (one rule: `backend/app/routes.py::visible`), user management, admin password reset,
-  change-own-password, audit log.
-- **Records:** learners, classes, subjects, terms, scores. Status separates scored / absent / unassessed / missing; a true zero is a real score.
-- **Analytics (Pandas/NumPy):** percentage normalisation, per-subject trends, "how this is calculated" note, indicators for decline,
-  inconsistency and low attendance, all worded as prompts for teacher review.
-- **AI drafts + approval:** drafts stored apart from official profiles; teacher edits, approves, rejects or requests revision; reviewer and date recorded.
-  Deterministic generator by default; optional Ollama (`AI_PROVIDER=ollama`) with automatic fallback.
-- **Attendance** recording and summaries; **support plans** with follow-up dates, outcomes, and notes that separate observations from interpretations.
-- **Dashboard** from real database rows (learners, classes, subjects, assessment completion, drafts to review, follow-ups due, attendance).
-- **Reports:** learner PDF and Excel, class Excel. Only teacher-approved profile text is exported; never unreviewed drafts.
-- **Frontend:** React + TypeScript + Vite (login, dashboard, learners, learner profile with chart, attendance, plans, reports, review queue, admin).
-- **Database:** SQLite for development, PostgreSQL for production, Alembic baseline migration.
-- **Tests:** 10 Pytest tests (auth, isolation, missing data, approval flow, attendance, plans, reports, users).
+Built with synthetic data only. Never load real learner data into a demo.
 
-## Not built yet (honest list)
-Tailwind (plain CSS is used), frontend automated tests, LangGraph and MCP workflows, scikit-learn models (indicators are rule-based on purpose),
-email-based password recovery (admin reset only), term/academic-year report types beyond the learner and class reports, rate limiting, error monitoring.
-Nothing is deployed yet.
+## Features
+- Sign-in with roles (school admin, teacher, read-only reviewer), school-level data isolation, teachers limited to their own classes
+- Login lockout, email-link password recovery, audit log, permanent learner deletion
+- Learners, classes, subjects, terms, score entry grid, class attendance register, CSV import with a safe "check first" step
+- Missing, absent and unassessed results are never treated as zero
+- Longitudinal trends with a plain explanation of how every figure is calculated
+- Transparent early-support indicators (decline, inconsistency, attendance), worded as prompts for teacher review, never as diagnoses
+- AI-assisted draft summaries with a mandatory human review step (deterministic by default, optional Ollama)
+- Support plans with follow-up dates, with observations kept separate from interpretations
+- Reports as PDF and Excel: learner reports, score spread, term comparison, academic year comparison, subject and attendance reports. Learners are never ranked.
 
-## Run locally
-```bash
+## Tech
+Python, FastAPI, SQLAlchemy, Alembic, Pandas, NumPy, Pytest. React, TypeScript, Vite. SQLite for development, PostgreSQL for production.
+
+## Run locally (Windows PowerShell)
+Backend:
+```powershell
 cd backend
-python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env                                   # set SECRET_KEY to a long random string
-python -m app.seed                                     # synthetic data
-uvicorn app.main:app --reload                          # API docs: http://localhost:8000/docs
-python -m pytest -q                                    # tests
+python -m app.seed
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
-```bash
+Frontend (second window):
+```powershell
 cd frontend
-cp .env.example .env
-npm install && npm run dev                             # http://localhost:5173
+copy .env.example .env
+npm install
+npm run dev
 ```
-Demo logins (password `demo-pass-123`): teacher1@demo.school, teacher2@demo.school, admin@demo.school, reviewer@demo.school, teacher@other.school.
-Open the first learner in Form 1A: it shows a maths decline, low attendance and an overdue support plan.
-Change or remove demo accounts before real use.
+Open the address that `npm run dev` prints (usually http://localhost:5173).
 
-## Deploy
-1. Create a PostgreSQL database (Render, Neon or Supabase). Free tiers may sleep or expire; check current terms.
-2. Backend on Render using `render.yaml` (runs `alembic upgrade head`). Set `SECRET_KEY`, `DATABASE_URL`, `CORS_ORIGINS`.
-   For a demo only, run `python -m app.seed` once in the Render shell. Never load real learner data into a demo.
-3. Frontend on Netlify: base `frontend`, build `npm run build`, publish `dist`, env `VITE_API_URL` = backend URL.
-4. Check `<backend>/health`, then sign in from the deployed frontend.
-5. Backups: enable your database provider's automated backups. Rollback: redeploy the previous Render/Netlify build and, if needed, `alembic downgrade -1`.
-Free backends sleep when idle, so the first request can be slow. Ollama cannot run on free hosting; the live site uses deterministic drafts.
+Demo accounts (password `demo-pass-123`): `teacher1@demo.school`, `teacher2@demo.school`, `admin@demo.school`, `reviewer@demo.school`.
+Change or delete these accounts before any real use.
+
+## Tests
+```powershell
+cd backend
+python -m pytest -q
+```
+
+## Configuration (environment variables)
+| Name | Purpose |
+|---|---|
+| `ENV` | Set to `production` online. Requires a strong `SECRET_KEY` and hides the API docs page |
+| `SECRET_KEY` | Random text of 32+ characters. Never commit it |
+| `DATABASE_URL` | PostgreSQL connection string in production |
+| `CORS_ORIGINS` | Your frontend address, comma-separated |
+| `FRONTEND_URL` | Used in password-reset links |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Email for password recovery |
+| `AI_PROVIDER`, `OLLAMA_URL`, `OLLAMA_MODEL` | Optional local AI model |
+| `VITE_API_URL` (frontend) | Address of the deployed backend |
+
+## Deploying
+1. Create a PostgreSQL database and set `DATABASE_URL`.
+2. Backend: deploy the `backend` folder (see `render.yaml`), which runs `alembic upgrade head` on start.
+3. Frontend: build with `npm run build` and host the `dist` folder, with `VITE_API_URL` set.
+4. Check `/health`, then sign in.
+
+Free hosting tiers may sleep when idle. Ollama cannot run on free hosting.
+
+## Not built yet
+Academic year and assessment-type fields in the database, class-level AI summaries, frontend automated tests, error monitoring, scheduled backups, and a live deployment.
+
+## Responsible use
+Indicators and AI drafts are suggestions for a teacher to review. They are not diagnoses and must not be used to rank learners or limit educational opportunities.
