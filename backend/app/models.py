@@ -5,7 +5,8 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 URL = os.getenv("DATABASE_URL", "sqlite:///./edulongview.db")
-URL = URL.replace("postgres://", "postgresql://", 1)
+for _p in ("postgres://", "postgresql://"):   # Render gives postgres://; SQLAlchemy 2.1 would then look for the newer psycopg driver
+    if URL.startswith(_p): URL = "postgresql+psycopg2://" + URL[len(_p):]
 kw = {}
 if URL.startswith("sqlite"):
     kw["connect_args"] = {"check_same_thread": False}
