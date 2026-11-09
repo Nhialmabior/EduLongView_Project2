@@ -70,24 +70,82 @@ export function Plans({ id, role }: { id: number; role: string }) {
 }
 
 export function Admin() {
-  const [users, setUsers] = useState<any[] | null>(null), [log, setLog] = useState<any[]>([]), [err, setErr] = useState(""), [msg, setMsg] = useState("");
+  const [users, setUsers] = useState<any[] | null>(null), [learners, setLearners] = useState<any[]>([]);
+  const [links, setLinks] = useState<any[]>([]), [log, setLog] = useState<any[]>([]);
+  const [err, setErr] = useState(""), [msg, setMsg] = useState("");
   const [f, setF] = useState({ name: "", email: "", role: "teacher", password: "" });
-  const load = () => Promise.all([api("/users"), api("/audit")]).then(([u, a]) => { setUsers(u); setLog(a); }).catch((e) => setErr(e.message));
+  const [linkForm, setLinkForm] = useState({ guardian_user_id: "", learner_id: "", relationship: "Parent", consent_confirmed: false });
+  const parents = (users || []).filter((u) => u.role === "parent");
+  const load = () => Promise.all([api("/users"), api("/audit"), api("/learners"), api("/guardian-links")])
+    .then(([u, a, ls, gl]) => {
+      setUsers(u); setLog(a); setLearners(ls); setLinks(gl);
+      if (!linkForm.guardian_user_id && u.some((x: any) => x.role === "parent")) {
+        setLinkForm((v) => ({ ...v, guardian_user_id: String(u.find((x: any) => x.role === "parent").id) }));
+      }
+      if (!linkForm.learner_id && ls.length) setLinkForm((v) => ({ ...v, learner_id: String(ls[0].id) }));
+    }).catch((e) => setErr(e.message));
   useEffect(() => { load(); }, []);
-  const create = async () => { setErr(""); setMsg(""); try { await api("/users", { method: "POST", body: f }); setMsg("User created."); setF({ name: "", email: "", role: "teacher", password: "" }); load(); } catch (e: any) { setErr(e.message); } };
-  const reset = async (u: any) => { const p = window.prompt(`New password for ${u.name} (at least 10 characters)`); if (!p) return; setErr(""); try { await api(`/users/${u.id}/reset-password`, { method: "POST", body: { password: p } }); setMsg("Password reset."); } catch (e: any) { setErr(e.message); } };
+  const create = async () => {
+    setErr(""); setMsg("");
+    try {
+      await api("/users", { method: "POST", body: f });
+      setMsg("User account created."); setF({ name: "", email: "", role: "teacher", password: "" }); await load();
+    } catch (e: any) { setErr(e.message); }
+  };
+  const reset = async (u: any) => {
+    const p = window.prompt(`New password for ${u.name} (at least 10 characters)`);
+    if (!p) return;
+    setErr("");
+    try { await api(`/users/${u.id}/reset-password`, { method: "POST", body: { password: p } }); setMsg("Password reset."); }
+    catch (e: any) { setErr(e.message); }
+  };
+  const createLink = async () => {
+    setErr(""); setMsg("");
+    try {
+      await api("/guardian-links", { method: "POST", body: { ...linkForm, guardian_user_id: Number(linkForm.guardian_user_id), learner_id: Number(linkForm.learner_id) } });
+      setMsg("Guardian link created and is awaiting school approval.");
+      setLinkForm((v) => ({ ...v, consent_confirmed: false })); await load();
+    } catch (e: any) { setErr(e.message); }
+  };
+  const changeLink = async (link: any, action: "approve" | "revoke") => {
+    setErr(""); setMsg("");
+    try {
+      await api(`/guardian-links/${link.id}/${action}`, { method: "POST" });
+      setMsg(action === "approve" ? "Guardian link approved." : "Guardian access revoked."); await load();
+    } catch (e: any) { setErr(e.message); }
+  };
   return (
     <>
       <h1>Administration</h1>{msg && <p role="status">{msg}</p>}{err && <p className="err" role="alert">{err}</p>}
-      <div className="card"><h2>Staff accounts</h2>
+      <div className="card"><h2>User accounts</h2>
         {!users ? <p>Loading users…</p> : <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th /></tr></thead><tbody>
           {users.map((u) => <tr key={u.id}><td>{u.name}</td><td>{u.email}</td><td>{u.role}</td><td><button className="btn alt" onClick={() => reset(u)}>Reset password</button></td></tr>)}</tbody></table>}
         <h3 style={{ marginTop: "1rem" }}>Add a user</h3>
         <label>Name<input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
         <label>Email<input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
-        <label>Role<select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}><option>teacher</option><option>reviewer</option><option>school_admin</option></select></label>
+        <label>Role<select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}><option>teacher</option><option>reviewer</option><option>school_admin</option><option>parent</option></select></label>
         <label>Temporary password (10+ characters)<input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="new-password" /></label>
         <button className="btn" onClick={create}>Create user</button></div>
+      <div className="card"><h2>Parent / guardian links</h2>
+        <p className="muted">Create a pending link only after consent has been recorded. Verify the adult's identity and legal authority through your school's safeguarding process before approving access.</p>
+        <label>Parent / guardian account<select value={linkForm.guardian_user_id} onChange={(e) => setLinkForm({ ...linkForm, guardian_user_id: e.target.value })}>
+          <option value="">Select a parent account</option>{parents.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.email}</option>)}
+        </select></label>
+        <label>Learner<select value={linkForm.learner_id} onChange={(e) => setLinkForm({ ...linkForm, learner_id: e.target.value })}>
+          <option value="">Select a learner</option>{learners.map((l) => <option key={l.id} value={l.id}>{l.name} · {l.class_name || "No class"}</option>)}
+        </select></label>
+        <label>Relationship<input value={linkForm.relationship} onChange={(e) => setLinkForm({ ...linkForm, relationship: e.target.value })} /></label>
+        <label style={{ display: "flex", alignItems: "center", gap: ".55rem" }}>
+          <input type="checkbox" checked={linkForm.consent_confirmed} onChange={(e) => setLinkForm({ ...linkForm, consent_confirmed: e.target.checked })} style={{ width: "auto", margin: 0 }} />
+          Consent has been recorded by the school
+        </label>
+        <button className="btn" onClick={createLink} disabled={!linkForm.guardian_user_id || !linkForm.learner_id || !linkForm.consent_confirmed}>Create pending link</button>
+        <h3 style={{ marginTop: "1.2rem" }}>Existing links</h3>
+        {links.length === 0 ? <p className="muted">No guardian links yet.</p> : <table><thead><tr><th>Guardian</th><th>Learner</th><th>Relationship</th><th>Status</th><th>Action</th></tr></thead><tbody>
+          {links.map((link) => <tr key={link.id}><td>{link.guardian_name}</td><td>{link.learner_name}</td><td>{link.relationship}</td><td><span className="badge">{link.status}</span></td>
+            <td>{link.status === "pending" ? <button className="btn" onClick={() => changeLink(link, "approve")}>Approve</button> : link.status === "approved" ? <button className="btn bad" onClick={() => changeLink(link, "revoke")}>Revoke</button> : "—"}</td></tr>)}
+        </tbody></table>}
+      </div>
       <div className="card"><h2>Recent activity</h2>
         {log.length === 0 ? <p className="muted">No activity yet.</p> : <table><thead><tr><th>When</th><th>Action</th><th>Detail</th></tr></thead><tbody>
           {log.map((a, i) => <tr key={i}><td>{a.at.slice(0, 16)}</td><td>{a.action}</td><td>{a.detail}</td></tr>)}</tbody></table>}</div>

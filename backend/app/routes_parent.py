@@ -162,3 +162,18 @@ def release_status(class_id: int, term_id: int, u=Depends(need("teacher", "schoo
     release = db.query(m.ResultRelease).filter_by(school_id=u.school_id, class_id=klass.id, term_id=term.id).first()
     return {"class_id": klass.id, "term_id": term.id, "status": release.status if release else "not_released",
             "released_at": str(release.released_at) if release and release.status == "released" else None}
+
+
+@p.get("/guardian-links")
+def list_guardian_links(u=Depends(need("school_admin")), db=Depends(db_dep)):
+    links = db.query(m.GuardianLink).filter_by(school_id=u.school_id).order_by(m.GuardianLink.id.desc()).all()
+    out = []
+    for link in links:
+        guardian = db.get(m.User, link.guardian_user_id)
+        learner = db.get(m.Learner, link.learner_id)
+        out.append({"id": link.id, "guardian_user_id": link.guardian_user_id,
+            "guardian_name": guardian.name if guardian else "Unavailable",
+            "learner_id": link.learner_id, "learner_name": learner.name if learner else "Unavailable",
+            "relationship": link.relationship, "status": link.status,
+            "consent_recorded": bool(link.consent_recorded)})
+    return out
