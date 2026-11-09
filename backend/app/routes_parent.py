@@ -151,3 +151,14 @@ def withdraw_results(class_id: int, term_id: int, u=Depends(need("teacher", "sch
     db.commit()
     audit(db, u, "results.withdraw", f"class {klass.id} term {term_id}")
     return {"class_id": klass.id, "term_id": term_id, "status": release.status}
+
+
+@p.get("/classes/{class_id}/terms/{term_id}/release-status")
+def release_status(class_id: int, term_id: int, u=Depends(need("teacher", "school_admin")), db=Depends(db_dep)):
+    klass = _class_for_teacher(db, u, class_id)
+    term = db.get(m.Term, term_id)
+    if not term or term.school_id != u.school_id:
+        raise HTTPException(404, "Term not found.")
+    release = db.query(m.ResultRelease).filter_by(school_id=u.school_id, class_id=klass.id, term_id=term.id).first()
+    return {"class_id": klass.id, "term_id": term.id, "status": release.status if release else "not_released",
+            "released_at": str(release.released_at) if release and release.status == "released" else None}
