@@ -6,6 +6,7 @@ from .routes import r
 from .routes_ext import x
 from .routes_data import d
 from .routes_auth import a
+from .routes_parent import p
 
 PROD = os.getenv("ENV", "development").lower() == "production"
 app = FastAPI(title="EduLongView API", version="0.3.0", redoc_url=None,
@@ -26,6 +27,7 @@ app.include_router(a)   # first on purpose: its /auth/login (with lockout) repla
 app.include_router(r)
 app.include_router(x)
 app.include_router(d)
+app.include_router(p)
 
 @app.get("/health")
 def health(): return {"status": "ok"}

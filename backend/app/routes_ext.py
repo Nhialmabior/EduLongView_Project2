@@ -79,7 +79,7 @@ def due(u=Depends(current), db=Depends(db_dep)):
 # ---------- classes and users ----------
 class NewClass(BaseModel): name: str = Field(min_length=1); teacher_id: Optional[int] = None
 class NewUser(BaseModel):
-    email: str; name: str; role: Literal["school_admin", "teacher", "reviewer"]; password: str = Field(min_length=10)
+    email: str; name: str; role: Literal["school_admin", "teacher", "reviewer", "parent"]; password: str = Field(min_length=10)
 class PwReset(BaseModel): password: str = Field(min_length=10)
 class PwChange(BaseModel): old: str; new: str = Field(min_length=10)
 

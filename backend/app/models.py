@@ -110,3 +110,38 @@ class PlanNote(Base):
     school_id = Column(Integer, nullable=False); plan_id = Column(Integer, ForeignKey("plans.id"), nullable=False)
     kind = Column(String, nullable=False); text = Column(Text, nullable=False)
     by = Column(Integer, ForeignKey("users.id")); at = Column(DateTime, default=now)
+
+
+class GuardianLink(Base):
+    """A school-approved relationship; a guardian sees no learner data while pending or revoked."""
+    __tablename__ = "guardian_links"
+    __table_args__ = (UniqueConstraint("guardian_user_id", "learner_id"),)
+    id = Column(Integer, primary_key=True)
+    school_id = Column(Integer, ForeignKey("schools.id"), nullable=False)
+    guardian_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    learner_id = Column(Integer, ForeignKey("learners.id"), nullable=False)
+    relationship = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending")  # pending | approved | revoked
+    consent_recorded = Column(Integer, nullable=False, default=0)
+    consent_recorded_by = Column(Integer, ForeignKey("users.id"))
+    consent_recorded_at = Column(DateTime)
+    approved_by = Column(Integer, ForeignKey("users.id"))
+    approved_at = Column(DateTime)
+    revoked_by = Column(Integer, ForeignKey("users.id"))
+    revoked_at = Column(DateTime)
+    created_at = Column(DateTime, default=now)
+
+
+class ResultRelease(Base):
+    """One current release state per class and term; every transition is separately audited."""
+    __tablename__ = "result_releases"
+    __table_args__ = (UniqueConstraint("class_id", "term_id"),)
+    id = Column(Integer, primary_key=True)
+    school_id = Column(Integer, ForeignKey("schools.id"), nullable=False)
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=False)
+    term_id = Column(Integer, ForeignKey("terms.id"), nullable=False)
+    status = Column(String, nullable=False, default="released")  # released | withdrawn
+    released_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    released_at = Column(DateTime, nullable=False, default=now)
+    withdrawn_by = Column(Integer, ForeignKey("users.id"))
+    withdrawn_at = Column(DateTime)
