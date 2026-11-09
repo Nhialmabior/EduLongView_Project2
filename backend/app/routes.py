@@ -32,6 +32,9 @@ def visible(db, u):
     q = db.query(m.Learner).filter(m.Learner.school_id == u.school_id, m.Learner.archived == 0)
     if u.role == "teacher":
         q = q.join(m.Klass, m.Klass.id == m.Learner.class_id).filter(m.Klass.teacher_id == u.id)
+    elif u.role == "parent":
+        # Parent access is deliberately available only through the release-gated portal routes.
+        q = q.filter(m.Learner.id == -1)
     return q
 
 def get_learner(db, u, lid):
