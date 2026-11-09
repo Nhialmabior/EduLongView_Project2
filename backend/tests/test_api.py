@@ -108,7 +108,7 @@ def test_user_management_and_password(c):
 def test_parent_portal_requires_approved_link_and_teacher_release(c):
     admin = H(c, "admin@demo.school")
     teacher = H(c, "teacher1@demo.school")
-    parent_body = {"email": "guardian@demo.school", "name": "Demo Guardian", "role": "parent", "password": "guardian-pass-123"}
+    parent_body = {"email": "guardian@demo.school", "name": "Demo Guardian", "role": "parent", "password": PW}
     assert c.post("/users", json=parent_body, headers=admin).status_code == 200
     parent = H(c, "guardian@demo.school")
     learner = c.get("/learners", headers=teacher).json()[0]
