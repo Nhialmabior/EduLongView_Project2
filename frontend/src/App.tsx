@@ -153,6 +153,120 @@ function Reviews({ role }: { role: string }) {
   );
 }
 
+
+function ParentPortal() {
+  const [children, setChildren] = useState<any[]>([]);
+  const [terms, setTerms] = useState<any[]>([]);
+  const [childId, setChildId] = useState("");
+  const [termId, setTermId] = useState("");
+  const [result, setResult] = useState<any>(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    Promise.all([api("/parent/children"), api("/terms")]).then(([cs, ts]) => {
+      setChildren(cs); setTerms(ts);
+      if (cs.length) setChildId(String(cs[0].id));
+      if (ts.length) setTermId(String(ts[0].id));
+    }).catch((e: any) => setErr(e.message));
+  }, []);
+
+  const loadResults = async () => {
+    if (!childId || !termId) return;
+    setBusy(true); setErr(""); setResult(null);
+    try { setResult(await api(`/parent/children/${childId}/results?term_id=${termId}`)); }
+    catch (e: any) {
+      setErr(e.message === "Released results not found." ? "Results for this term have not been released by the teacher yet." : e.message);
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <>
+      <h1>Parent / Guardian Portal</h1>
+      <p className="muted">You can only view children linked and approved by the school, and results their teacher has released.</p>
+      <div className="card">
+        <label>Child
+          <select value={childId} onChange={(e) => { setChildId(e.target.value); setResult(null); setErr(""); }}>
+            {children.map((c) => <option key={c.id} value={c.id}>{c.name}{c.class_name ? ` · ${c.class_name}` : ""}</option>)}
+          </select>
+        </label>
+        <label>Term
+          <select value={termId} onChange={(e) => { setTermId(e.target.value); setResult(null); setErr(""); }}>
+            {terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </label>
+        <button className="btn" onClick={loadResults} disabled={busy || !childId || !termId}>{busy ? "Checking…" : "View released results"}</button>
+      </div>
+      {err && <p className="muted" role="status">{err}</p>}
+      {children.length === 0 && <div className="card"><p>No approved learner links are available for this account. Please contact the school office.</p></div>}
+      {result && <div className="card">
+        <h2>{result.learner.name} · {result.term.name}</h2>
+        <p className="muted">Released by the school on {result.released_at.slice(0, 10)}.</p>
+        {result.results.length === 0 ? <p className="muted">No results have been recorded for this term.</p> :
+          <table><thead><tr><th>Subject</th><th>Result</th><th>Status</th></tr></thead><tbody>
+            {result.results.map((r: any) => <tr key={r.subject}><td>{r.subject}</td><td>{r.status === "scored" && r.value != null ? `${r.value} / ${r.max}` : "—"}</td><td>{r.status}</td></tr>)}
+          </tbody></table>}
+      </div>}
+    </>
+  );
+}
+
+function ResultsRelease() {
+  const [classes, setClasses] = useState<any[]>([]);
+  const [terms, setTerms] = useState<any[]>([]);
+  const [classId, setClassId] = useState("");
+  const [termId, setTermId] = useState("");
+  const [status, setStatus] = useState("not_released");
+  const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    Promise.all([api("/classes"), api("/terms")]).then(([cs, ts]) => {
+      setClasses(cs); setTerms(ts);
+      if (cs.length) setClassId(String(cs[0].id));
+      if (ts.length) setTermId(String(ts[0].id));
+    }).catch((e: any) => setErr(e.message));
+  }, []);
+
+  useEffect(() => {
+    if (!classId || !termId) return;
+    api(`/classes/${classId}/terms/${termId}/release-status`)
+      .then((r) => setStatus(r.status)).catch((e: any) => setErr(e.message));
+  }, [classId, termId]);
+
+  const changeRelease = async () => {
+    setBusy(true); setErr(""); setMsg("");
+    const action = status === "released" ? "withdraw-release" : "release";
+    try {
+      const r = await api(`/classes/${classId}/terms/${termId}/${action}`, { method: "POST" });
+      setStatus(r.status); setMsg(action === "release" ? "Results released to approved guardians." : "Results access withdrawn.");
+    } catch (e: any) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <>
+      <h1>Results release</h1>
+      <p className="muted">Review your class results before releasing them. Only approved guardians linked to learners in this class can view released results.</p>
+      <div className="card">
+        <label>Class<select value={classId} onChange={(e) => setClassId(e.target.value)}>
+          {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select></label>
+        <label>Term<select value={termId} onChange={(e) => setTermId(e.target.value)}>
+          {terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select></label>
+        <p>Current status: <span className="badge">{status.replace("_", " ")}</span></p>
+        <button className={status === "released" ? "btn bad" : "btn"} onClick={changeRelease} disabled={busy || !classId || !termId}>
+          {busy ? "Saving…" : status === "released" ? "Withdraw results release" : "Release results to guardians"}
+        </button>
+        {msg && <p role="status">{msg}</p>}
+        {err && <p className="err" role="alert">{err}</p>}
+      </div>
+    </>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState<any>(null), [view, setView] = useState("dash"), [lid, setLid] = useState<number | null>(null), [ready, setReady] = useState(!getToken());
   useEffect(() => { if (getToken()) api("/me").then(setUser).catch(() => setToken("")).finally(() => setReady(true)); }, []);
@@ -163,15 +277,18 @@ if (!user) return <LoginScreen onDone={setUser} />;
     <>
       <header className="bar">
         <span className="brand">EduLongView</span>
-        <nav aria-label="Main">{[["dash", "Dashboard"], ["learners", "Learners"], ["reviews", "Reviews"], ...(user.role !== "reviewer" ? [["data", "Data"]] : []), ...(user.role === "school_admin" ? [["admin", "Admin"]] : [])].map(([k, t]) => <button key={k} className={view === k ? "on" : ""} onClick={() => nav(k)}>{t}</button>)}</nav>
+        <nav aria-label="Main">{(user.role === "parent" ? [["parent", "Parent portal"]] : [["dash", "Dashboard"], ["learners", "Learners"], ["reviews", "Reviews"], ...(user.role !== "reviewer" ? [["data", "Data"]] : []), ...(user.role === "teacher" || user.role === "school_admin" ? [["release", "Results release"]] : []), ...(user.role === "school_admin" ? [["admin", "Admin"]] : [])]).map(([k, t]) => <button key={k} className={view === k ? "on" : ""} onClick={() => nav(k)}>{t}</button>)}</nav>
         <span>{user.name} <button className="linkbtn" onClick={() => { setToken(""); setUser(null); }}>Sign out</button></span>
       </header>
       <main>
+        {user.role === "parent" ? <ParentPortal /> : <>
         {view === "dash" && <Dashboard />}
         {view === "learners" && (lid ? <LearnerPage id={lid} role={user.role} back={() => setLid(null)} /> : <Learners open={setLid} />)}
         {view === "reviews" && <Reviews role={user.role} />}
         {view === "admin" && <Admin />}
         {view === "data" && <DataPage role={user.role} />}
+        {view === "release" && <ResultsRelease />}
+        </>}
       </main>
     </>
   );
