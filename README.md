@@ -16,14 +16,14 @@ Built with synthetic data only. Never load real learner data into a demo.
 - Reports as PDF and Excel: learner reports, score spread, term comparison, academic year comparison, subject and attendance reports. Learners are never ranked.
 
 ## Tech
-Python, FastAPI, SQLAlchemy, Alembic, Pandas, NumPy, Pytest. React, TypeScript, Vite. SQLite for development, PostgreSQL for production.
+Python, FastAPI, SQLAlchemy, Alembic, Pandas, NumPy, Pytest. React, TypeScript, Vite. SQLite for development and synthetic previews; PostgreSQL for durable deployments.
 
 ## Run locally (Windows PowerShell)
 Backend:
 ```powershell
 cd backend
 python -m venv .venv
-.venv\Scripts\activate
+.venv\\Scripts\\activate
 pip install -r requirements.txt
 python -m app.seed
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
@@ -44,6 +44,9 @@ Change or delete these accounts before any real use.
 ```powershell
 cd backend
 python -m pytest -q
+cd ../frontend
+npm ci
+npm run build
 ```
 
 ## Configuration (environment variables)
@@ -51,23 +54,34 @@ python -m pytest -q
 |---|---|
 | `ENV` | Set to `production` online. Requires a strong `SECRET_KEY` and hides the API docs page |
 | `SECRET_KEY` | Random text of 32+ characters. Never commit it |
-| `DATABASE_URL` | PostgreSQL connection string in production |
-| `CORS_ORIGINS` | Your frontend address, comma-separated |
+| `DATABASE_URL` | PostgreSQL connection string for durable deployments. If omitted, the app uses local SQLite |
+| `CORS_ORIGINS` | Your frontend origin, comma-separated |
 | `FRONTEND_URL` | Used in password-reset links |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Email for password recovery |
 | `AI_PROVIDER`, `OLLAMA_URL`, `OLLAMA_MODEL` | Optional local AI model |
 | `VITE_API_URL` (frontend) | Address of the deployed backend |
 
-## Deploying
-1. Create a PostgreSQL database and set `DATABASE_URL`.
-2. Backend: deploy the `backend` folder (see `render.yaml`), which runs `alembic upgrade head` on start.
-3. Frontend: build with `npm run build` and host the `dist` folder, with `VITE_API_URL` set.
-4. Check `/health`, then sign in.
+## Deployment
 
-Free hosting tiers may sleep when idle. Ollama cannot run on free hosting.
+### Current free preview architecture
+- **GitHub** stores the source code and runs automated checks.
+- **GitHub Pages** hosts the React frontend from the `main` branch.
+- **Render** hosts the FastAPI backend using the root `render.yaml` Blueprint.
+- The Render service is configured for automatic deployment after commits to its connected branch.
+- The free preview uses SQLite only for synthetic demo data. Render free web services have an ephemeral filesystem, so local SQLite data can disappear after a restart, spin-down or redeploy.
+
+To create or update the Render service, connect this repository in Render and use **Blueprint** deployment. Select the intended branch and confirm the `edulongview-api` web service. Render generates `SECRET_KEY`; do not commit secrets. The backend health endpoint is `/health`.
+
+### Important free-tier limits
+Render free web services sleep after 15 minutes without inbound traffic and can take about a minute to wake. Render free PostgreSQL expires after 30 days and does not include backups. For that reason, this Blueprint deliberately does **not** create a free Render database. Free hosting is for development and synthetic demonstrations, not real learner records.
+
+Before any real school use, configure a persistent PostgreSQL database with backups, verify migrations and restore procedures, configure transactional email, complete a security/privacy review, and use a continuously available backend. Do not place real children's data in this free preview.
+
+### Automated quality checks
+GitHub Actions runs the backend test suite and frontend production build on pushes and pull requests. GitHub Pages deployment remains restricted to `main`; feature branches are validated without replacing the live site.
 
 ## Not built yet
-Academic year and assessment-type fields in the database, class-level AI summaries, frontend automated tests, error monitoring, scheduled backups, and a live deployment.
+Academic year and assessment-type fields in the database, class-level AI summaries, frontend automated tests, error monitoring, scheduled backups, guardian accounts, parent result release, learner accounts, practice quizzes, and a live production deployment.
 
 ## Responsible use
-Indicators and AI drafts are suggestions for a teacher to review. They are not diagnoses and must not be used to rank learners or limit educational opportunities.
+Indicators and AI drafts are suggestions for a teacher to review. They are not diagnoses and must not be used to rank learners or limit educational opportunities. Parent access must be limited to teacher-released information for a verified guardian-child relationship. Practice quiz results must remain separate from official assessment records.
