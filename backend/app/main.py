@@ -11,7 +11,11 @@ from .routes_parent import p
 PROD = os.getenv("ENV", "development").lower() == "production"
 app = FastAPI(title="EduLongView API", version="0.3.0", redoc_url=None,
               docs_url=None if PROD else "/docs", openapi_url=None if PROD else "/openapi.json")
-app.add_middleware(CORSMiddleware, allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173").split(","),
+allowed_origins = [origin.strip() for origin in os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,https://nhialmabior.github.io",
+).split(",") if origin.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=allowed_origins,
                    allow_methods=["*"], allow_headers=["*"])
 
 @app.middleware("http")
