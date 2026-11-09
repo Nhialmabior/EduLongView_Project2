@@ -277,7 +277,7 @@ if (!user) return <LoginScreen onDone={setUser} />;
     <>
       <header className="bar">
         <span className="brand">EduLongView</span>
-        <nav aria-label="Main">{(user.role === "parent" ? [["parent", "Parent portal"]] : [["dash", "Dashboard"], ["learners", "Learners"], ["reviews", "Reviews"], ...(user.role !== "reviewer" ? [["data", "Data"]] : []), ...(user.role === "teacher" || user.role === "school_admin" ? [["release", "Results release"]] : []), ...(user.role === "school_admin" ? [["admin", "Admin"]] : [])]).map(([k, t]) => <button key={k} className={view === k ? "on" : ""} onClick={() => nav(k)}>{t}</button>)}</nav>
+        <nav aria-label="Main">{(user.role === "parent" ? [["parent", "Parent portal"]] : [["dash", "Dashboard"], ["learners", "Learners"], ["reviews", "Reviews"], ...(user.role !== "reviewer" ? [["data", "Data"]] : []), ...(user.role === "teacher" || user.role === "school_admin" ? [["release", "Results release"]] : []), ...(user.role === "school_admin" ? [["admin", "Admin"]] : [])]).map(([k, t]) => <button key={k} className={view === k || (user.role === "parent" && k === "parent") ? "on" : ""} onClick={() => nav(k)}>{t}</button>)}</nav>
         <span>{user.name} <button className="linkbtn" onClick={() => { setToken(""); setUser(null); }}>Sign out</button></span>
       </header>
       <main>
