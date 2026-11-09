@@ -103,3 +103,33 @@ def test_user_management_and_password(c):
     uid = next(u["id"] for u in c.get("/users", headers=a).json() if u["email"] == "new@demo.school")
     assert c.post(f"/users/{uid}/reset-password", json={"password": "reset-by-admin-3"}, headers=H(c, "teacher@other.school")).status_code in (403,)
     assert c.post(f"/users/{uid}/reset-password", json={"password": "reset-by-admin-3"}, headers=a).status_code == 200
+
+
+def test_parent_portal_requires_approved_link_and_teacher_release(c):
+    admin = H(c, "admin@demo.school")
+    teacher = H(c, "teacher1@demo.school")
+    parent_body = {"email": "guardian@demo.school", "name": "Demo Guardian", "role": "parent", "password": "guardian-pass-123"}
+    assert c.post("/users", json=parent_body, headers=admin).status_code == 200
+    parent = H(c, "guardian@demo.school")
+    learner = c.get("/learners", headers=teacher).json()[0]
+    terms = c.get("/terms", headers=admin).json()
+    term_id = terms[0]["id"]
+    link = {"guardian_user_id": c.get("/users", headers=admin).json()[-1]["id"],
+            "learner_id": learner["id"], "relationship": "Parent", "consent_confirmed": True}
+    assert c.post("/guardian-links", json=dict(link, consent_confirmed=False), headers=admin).status_code == 422
+    pending = c.post("/guardian-links", json=link, headers=admin)
+    assert pending.status_code == 200 and pending.json()["status"] == "pending"
+    assert c.get("/parent/children", headers=parent).json() == []
+    assert c.post(f"/guardian-links/{pending.json()['id']}/approve", headers=admin).json()["status"] == "approved"
+    assert len(c.get("/parent/children", headers=parent).json()) == 1
+    assert c.get(f"/parent/children/{learner['id']}/results?term_id={term_id}", headers=parent).status_code == 404
+    assert c.get("/learners", headers=parent).json() == []
+    assert c.get(f"/learners/{learner['id']}", headers=parent).status_code == 404
+    assert c.post(f"/classes/{c.get('/classes', headers=teacher).json()[0]['id']}/terms/{term_id}/release", headers=teacher).status_code == 200
+    result = c.get(f"/parent/children/{learner['id']}/results?term_id={term_id}", headers=parent)
+    assert result.status_code == 200 and len(result.json()["results"]) == 1
+    assert c.post(f"/classes/{c.get('/classes', headers=teacher).json()[0]['id']}/terms/{term_id}/withdraw-release", headers=teacher).status_code == 200
+    assert c.get(f"/parent/children/{learner['id']}/results?term_id={term_id}", headers=parent).status_code == 404
+    log = c.get("/audit", headers=admin).json()
+    assert any(x["action"] == "results.release" for x in log)
+    assert any(x["action"] == "results.withdraw" for x in log)
