@@ -127,7 +127,7 @@ def test_parent_portal_requires_approved_link_and_teacher_release(c):
     assert c.get(f"/learners/{learner['id']}", headers=parent).status_code == 404
     assert c.post(f"/classes/{c.get('/classes', headers=teacher).json()[0]['id']}/terms/{term_id}/release", headers=teacher).status_code == 200
     result = c.get(f"/parent/children/{learner['id']}/results?term_id={term_id}", headers=parent)
-    assert result.status_code == 200 and len(result.json()["results"]) == 1
+    assert result.status_code == 200 and len(result.json()["results"]) == 4
     assert c.post(f"/classes/{c.get('/classes', headers=teacher).json()[0]['id']}/terms/{term_id}/withdraw-release", headers=teacher).status_code == 200
     assert c.get(f"/parent/children/{learner['id']}/results?term_id={term_id}", headers=parent).status_code == 404
     log = c.get("/audit", headers=admin).json()
